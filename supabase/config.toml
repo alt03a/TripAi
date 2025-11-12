@@ -1,1 +1,10 @@
 project_id = "ypjmqcuxruwpoidmjkiw"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.weather]
+verify_jwt = false
+
+[functions.currency]
+verify_jwt = false
