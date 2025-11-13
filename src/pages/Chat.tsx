@@ -5,8 +5,8 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
 import { ChatModeSelector } from "@/components/chat/ChatModeSelector";
 import { TripSelector } from "@/components/chat/TripSelector";
+import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
 
 export default function Chat() {
   const { messages, isLoading, mode, setMode, currentTrip, setCurrentTrip, sendMessage } = useChat();
@@ -39,11 +39,7 @@ export default function Chat() {
               {messages.map((message) => (
                 <ChatMessage key={message.id} message={message} />
               ))}
-              {isLoading && (
-                <div className="flex justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
+              {isLoading && <TypingIndicator />}
             </div>
           </ScrollArea>
         )}
