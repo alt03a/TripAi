@@ -7,6 +7,7 @@ import { lazy, Suspense } from "react";
 import { AppShell } from "./components/layout/AppShell";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ThemeProvider } from "./components/ui/theme-provider";
 import { Loader2 } from "lucide-react";
 
 // Lazy load pages for better performance
@@ -42,38 +43,40 @@ const LoadingFallback = () => (
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <AppShell />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="/" element={<Index />} />
-                <Route path="/explore" element={<Explore />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/plan-trip" element={<PlanTrip />} />
-                <Route path="/trips" element={<Trips />} />
-                <Route path="/trips/:id" element={<TripDetail />} />
-                <Route path="/destinations/:id" element={<DestinationDetail />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/documents" element={<Documents />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="system" storageKey="triptuner-theme">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <AppShell />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/" element={<Index />} />
+                  <Route path="/explore" element={<Explore />} />
+                  <Route path="/chat" element={<Chat />} />
+                  <Route path="/plan-trip" element={<PlanTrip />} />
+                  <Route path="/trips" element={<Trips />} />
+                  <Route path="/trips/:id" element={<TripDetail />} />
+                  <Route path="/destinations/:id" element={<DestinationDetail />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/documents" element={<Documents />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 

@@ -1,6 +1,7 @@
 import { Home, Compass, MessageCircle, Briefcase, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/" },
@@ -15,7 +16,7 @@ export const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-      <div className="flex justify-around items-center h-16 max-w-screen-xl mx-auto px-4">
+      <div className="flex justify-around items-center h-16 max-w-screen-xl mx-auto px-2">
         {navItems.map(({ icon: Icon, label, path }) => {
           const isActive = location.pathname === path;
           return (
@@ -23,17 +24,20 @@ export const BottomNav = () => {
               key={path}
               to={path}
               className={cn(
-                "flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors min-w-[64px]",
+                "flex flex-col items-center gap-1 py-2 px-2 rounded-lg transition-colors flex-1",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className="h-6 w-6" />
+              <Icon className="h-5 w-5" />
               <span className="text-xs font-medium">{label}</span>
             </Link>
           );
         })}
+        <div className="flex items-center justify-center px-2">
+          <ThemeToggle />
+        </div>
       </div>
     </nav>
   );
