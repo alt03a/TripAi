@@ -22,6 +22,7 @@ const TripDetail = lazy(() => import("./pages/TripDetail"));
 const DestinationDetail = lazy(() => import("./pages/DestinationDetail"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Documents = lazy(() => import("./pages/Documents"));
+const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -69,6 +70,7 @@ const App = () => (
                   <Route path="/destinations/:id" element={<DestinationDetail />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/documents" element={<Documents />} />
+                  <Route path="/admin" element={<Admin />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -5,8 +5,15 @@ import { NotificationSettings } from "@/components/profile/NotificationSettings"
 import { PrivacySettings } from "@/components/profile/PrivacySettings";
 import { SignOutButton } from "@/components/profile/SignOutButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useAdmin } from "@/hooks/useAdmin";
+import { useNavigate } from "react-router-dom";
+import { Shield } from "lucide-react";
 
 export default function Profile() {
+  const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
+
   return (
     <DashboardLayout>
       <h1 className="text-3xl font-heading font-bold text-foreground mb-6">
@@ -25,7 +32,17 @@ export default function Profile() {
               <CardTitle>Account</CardTitle>
               <CardDescription>Manage your account settings</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate("/admin")}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Dashboard
+                </Button>
+              )}
               <SignOutButton />
             </CardContent>
           </Card>
