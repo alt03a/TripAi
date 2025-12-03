@@ -162,14 +162,31 @@ export const MapView = ({ locations }: MapViewProps) => {
     };
   }, []);
 
+  // Initialize map only once
   useEffect(() => {
-    if (!mapRef.current || !GEOAPIFY_API_KEY) return;
+    if (!mapRef.current || !GEOAPIFY_API_KEY || map) return;
 
-    const defaultCenter = locations.length > 0 
-      ? [locations[0].lat, locations[0].lng] as L.LatLngTuple
-      : [0, 0] as L.LatLngTuple;
+    const mapContainer = mapRef.current;
+    
+    // Ensure container is ready
+    if (!mapContainer.offsetWidth || !mapContainer.offsetHeight) {
+      const timer = setTimeout(() => {
+        if (mapRef.current && !map) {
+          const newMap = L.map(mapRef.current).setView([0, 0], 2);
+          L.tileLayer(
+            `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_API_KEY}`,
+            {
+              attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+              maxZoom: 20,
+            }
+          ).addTo(newMap);
+          setMap(newMap);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
 
-    const newMap = L.map(mapRef.current).setView(defaultCenter, locations.length > 1 ? 8 : 12);
+    const newMap = L.map(mapContainer).setView([0, 0], 2);
 
     L.tileLayer(
       `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_API_KEY}`,
@@ -183,16 +200,29 @@ export const MapView = ({ locations }: MapViewProps) => {
 
     return () => {
       newMap.remove();
+      setMap(null);
     };
-  }, [locations]);
+  }, [map]);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map || !mapRef.current) return;
 
-    markersRef.current.forEach((marker) => marker.remove());
+    // Clear existing markers
+    markersRef.current.forEach((marker) => {
+      try {
+        marker.remove();
+      } catch (e) {
+        // Marker may already be removed
+      }
+    });
     markersRef.current = [];
+    
     if (routeLayerRef.current) {
-      routeLayerRef.current.remove();
+      try {
+        routeLayerRef.current.remove();
+      } catch (e) {
+        // Layer may already be removed
+      }
       routeLayerRef.current = null;
     }
 
@@ -201,51 +231,63 @@ export const MapView = ({ locations }: MapViewProps) => {
     const createNumberedIcon = (number: number) => {
       return L.divIcon({
         html: `<div style="background: hsl(var(--secondary)); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${number}</div>`,
-        className: "",
+        className: "numbered-marker",
         iconSize: [30, 30],
         iconAnchor: [15, 15],
       });
     };
 
-    locations.forEach((location, index) => {
-      const marker = L.marker([location.lat, location.lng], {
-        icon: createNumberedIcon(index + 1),
-      }).addTo(map);
+    // Add markers and routes with a small delay to ensure map is fully ready
+    const timer = setTimeout(() => {
+      // Add markers
+      locations.forEach((location, index) => {
+        try {
+          const marker = L.marker([location.lat, location.lng], {
+            icon: createNumberedIcon(index + 1),
+          }).addTo(map);
 
-      marker.bindPopup(`<div style="padding: 8px;"><strong>${location.name}</strong></div>`);
-      markersRef.current.push(marker);
-    });
+          marker.bindPopup(`<div style="padding: 8px;"><strong>${location.name}</strong></div>`);
+          markersRef.current.push(marker);
+        } catch (e) {
+          console.error("Error adding marker:", e);
+        }
+      });
 
-    if (locations.length > 1) {
-      const waypoints = locations
-        .map((loc) => `${loc.lat},${loc.lng}`)
-        .join("|");
+      // Fetch and display route
+      if (locations.length > 1) {
+        const waypoints = locations
+          .map((loc) => `${loc.lat},${loc.lng}`)
+          .join("|");
 
-      fetch(
-        `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=drive&apiKey=${GEOAPIFY_API_KEY}`
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.features && data.features.length > 0) {
-            const routeLayer = L.geoJSON(data, {
-              style: {
-                color: "hsl(var(--secondary))",
-                weight: 4,
-                opacity: 0.8,
-              },
-            }).addTo(map);
-            routeLayerRef.current = routeLayer;
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching route:", error);
-        });
-    }
+        fetch(
+          `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=drive&apiKey=${GEOAPIFY_API_KEY}`
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.features && data.features.length > 0) {
+              const routeLayer = L.geoJSON(data, {
+                style: {
+                  color: "hsl(var(--secondary))",
+                  weight: 4,
+                  opacity: 0.8,
+                },
+              }).addTo(map);
+              routeLayerRef.current = routeLayer;
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching route:", error);
+          });
+      }
 
-    if (locations.length > 0) {
-      const bounds = L.latLngBounds(locations.map((loc) => [loc.lat, loc.lng]));
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
+      // Fit bounds
+      if (locations.length > 0) {
+        const bounds = L.latLngBounds(locations.map((loc) => [loc.lat, loc.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }, 50);
+    
+    return () => clearTimeout(timer);
   }, [map, locations]);
 
   if (!GEOAPIFY_API_KEY) {
