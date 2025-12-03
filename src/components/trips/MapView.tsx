@@ -2,7 +2,6 @@ import { Card } from "@/components/ui/card";
 import { MapPin, Navigation, Locate, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -17,11 +16,11 @@ interface MapViewProps {
   locations: Location[];
 }
 
+const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY || "";
+
 export const MapView = ({ locations }: MapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<L.Map | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [isKeySet, setIsKeySet] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const markersRef = useRef<L.Marker[]>([]);
@@ -30,21 +29,6 @@ export const MapView = ({ locations }: MapViewProps) => {
   const userAccuracyCircleRef = useRef<L.Circle | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const storedKey = sessionStorage.getItem("geoapify_api_key");
-    if (storedKey) {
-      setApiKey(storedKey);
-      setIsKeySet(true);
-    }
-  }, []);
-
-  const handleSetApiKey = () => {
-    if (apiKey.trim()) {
-      sessionStorage.setItem("geoapify_api_key", apiKey);
-      setIsKeySet(true);
-    }
-  };
 
   // Create user location marker icon
   const createUserIcon = () => {
@@ -179,7 +163,7 @@ export const MapView = ({ locations }: MapViewProps) => {
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current || !isKeySet) return;
+    if (!mapRef.current || !GEOAPIFY_API_KEY) return;
 
     const defaultCenter = locations.length > 0 
       ? [locations[0].lat, locations[0].lng] as L.LatLngTuple
@@ -188,7 +172,7 @@ export const MapView = ({ locations }: MapViewProps) => {
     const newMap = L.map(mapRef.current).setView(defaultCenter, locations.length > 1 ? 8 : 12);
 
     L.tileLayer(
-      `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${apiKey}`,
+      `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_API_KEY}`,
       {
         attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 20,
@@ -200,10 +184,10 @@ export const MapView = ({ locations }: MapViewProps) => {
     return () => {
       newMap.remove();
     };
-  }, [isKeySet, apiKey]);
+  }, [locations]);
 
   useEffect(() => {
-    if (!map || !isKeySet) return;
+    if (!map) return;
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -238,7 +222,7 @@ export const MapView = ({ locations }: MapViewProps) => {
         .join("|");
 
       fetch(
-        `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=drive&apiKey=${apiKey}`
+        `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=drive&apiKey=${GEOAPIFY_API_KEY}`
       )
         .then((response) => response.json())
         .then((data) => {
@@ -262,42 +246,20 @@ export const MapView = ({ locations }: MapViewProps) => {
       const bounds = L.latLngBounds(locations.map((loc) => [loc.lat, loc.lng]));
       map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [map, locations, apiKey, isKeySet]);
+  }, [map, locations]);
 
-  if (!isKeySet) {
+  if (!GEOAPIFY_API_KEY) {
     return (
       <Card className="p-6 bg-muted/30">
         <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-lg gap-4">
           <MapPin className="h-12 w-12 text-muted-foreground" />
           <div className="text-center space-y-2">
             <p className="text-muted-foreground font-medium">
-              Geoapify API Key Required
+              Map configuration error
             </p>
             <p className="text-sm text-muted-foreground max-w-md">
-              Enter your Geoapify API key to view location maps and routes.
-              Get your key at{" "}
-              <a
-                href="https://myprojects.geoapify.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                Geoapify Projects
-              </a>
+              The map API key is not configured. Please contact the administrator.
             </p>
-          </div>
-          <div className="flex gap-2 w-full max-w-md">
-            <Input
-              type="text"
-              placeholder="Enter Geoapify API Key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSetApiKey()}
-            />
-            <Button onClick={handleSetApiKey}>
-              <Navigation className="h-4 w-4 mr-2" />
-              Set Key
-            </Button>
           </div>
         </div>
       </Card>
