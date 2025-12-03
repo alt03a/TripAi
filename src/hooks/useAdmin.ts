@@ -57,6 +57,7 @@ export const useAdmin = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("admin/check-role", {
+        method: "GET",
         headers: getAuthHeaders(),
       });
 
