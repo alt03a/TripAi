@@ -16,7 +16,7 @@ interface MapViewProps {
   locations: Location[];
 }
 
-const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY || "";
+const GEOAPIFY_API_KEY = "9820c4ade98c4ac992b68e390c427c30";
 
 export const MapView = ({ locations }: MapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
