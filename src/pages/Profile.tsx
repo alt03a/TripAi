@@ -48,6 +48,16 @@ export default function Profile() {
           </Card>
         </div>
       </div>
+
+      {/* Developer Credit */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <p className="text-center text-sm text-muted-foreground">
+          Developed with <span className="text-coral animate-pulse">♥</span> by{" "}
+          <span className="font-semibold bg-gradient-to-r from-primary via-coral to-golden bg-clip-text text-transparent">
+            Sk Altab Hossen
+          </span>
+        </p>
+      </div>
     </DashboardLayout>
   );
 }
