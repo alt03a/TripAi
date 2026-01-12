@@ -48,7 +48,8 @@ export const useAdmin = () => {
   }, [session]);
 
   const checkRole = useCallback(async () => {
-    if (!user || !session) {
+    // Only check role if we have both user and valid session token
+    if (!user || !session?.access_token) {
       setIsAdmin(false);
       setRole("user");
       setLoading(false);
@@ -61,18 +62,36 @@ export const useAdmin = () => {
         headers: getAuthHeaders(),
       });
 
-      if (error) throw error;
+      // Handle auth errors gracefully (user logged out, session expired)
+      if (error) {
+        // Check if it's an auth-related error
+        const errorMessage = error.message?.toLowerCase() || "";
+        if (
+          errorMessage.includes("invalid user") ||
+          errorMessage.includes("unauthorized") ||
+          errorMessage.includes("401") ||
+          errorMessage.includes("non-2xx")
+        ) {
+          // Silently handle auth errors - user may have logged out
+          setIsAdmin(false);
+          setRole("user");
+          setLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       setIsAdmin(data?.isAdmin || false);
       setRole(data?.role || "user");
     } catch (error) {
+      // Only log non-auth errors
       console.error("Error checking role:", error);
       setIsAdmin(false);
       setRole("user");
     } finally {
       setLoading(false);
     }
-  }, [user, session, getAuthHeaders]);
+  }, [user, session?.access_token, getAuthHeaders]);
 
   useEffect(() => {
     checkRole();
