@@ -31,6 +31,8 @@ const mockTripData = {
           title: "Airport Transfer",
           time: "10:00",
           location: "Ngurah Rai Airport",
+          lat: -8.7467,
+          lng: 115.1667,
           duration: "1 hour",
           cost: 50,
           notes: "Pre-booked car service",
@@ -40,6 +42,8 @@ const mockTripData = {
           title: "Hotel Check-in",
           time: "12:00",
           location: "Seminyak Beach Hotel",
+          lat: -8.6912,
+          lng: 115.1663,
           duration: "30 minutes",
           cost: 0,
         },
@@ -48,6 +52,8 @@ const mockTripData = {
           title: "Beach Sunset",
           time: "18:00",
           location: "Seminyak Beach",
+          lat: -8.6872,
+          lng: 115.1547,
           duration: "2 hours",
           cost: 20,
           notes: "Dinner at beach club",
@@ -62,6 +68,8 @@ const mockTripData = {
           title: "Ubud Rice Terraces",
           time: "08:00",
           location: "Tegallalang Rice Terrace",
+          lat: -8.4312,
+          lng: 115.2792,
           duration: "3 hours",
           cost: 35,
         },
@@ -70,6 +78,8 @@ const mockTripData = {
           title: "Monkey Forest",
           time: "13:00",
           location: "Sacred Monkey Forest Sanctuary",
+          lat: -8.5184,
+          lng: 115.2588,
           duration: "2 hours",
           cost: 25,
         },
@@ -130,10 +140,11 @@ export default function TripDetail() {
 
   const locations = trip.days
     .flatMap((day) => day.activities)
+    .filter((activity) => activity.lat && activity.lng)
     .map((activity) => ({
       name: activity.location,
-      lat: 0,
-      lng: 0,
+      lat: activity.lat,
+      lng: activity.lng,
     }));
 
   return (

@@ -164,45 +164,57 @@ export const MapView = ({ locations }: MapViewProps) => {
 
   // Initialize map only once
   useEffect(() => {
-    if (!mapRef.current || !GEOAPIFY_API_KEY || map) return;
+    if (!mapRef.current || map) return;
 
     const mapContainer = mapRef.current;
+    
+    // Create initialization function
+    const initMap = () => {
+      if (!mapRef.current) return null;
+      
+      try {
+        const newMap = L.map(mapRef.current, {
+          zoomControl: true,
+          scrollWheelZoom: true,
+        }).setView([-8.5, 115.2], 10); // Default to Bali area
+        
+        L.tileLayer(
+          `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_API_KEY}`,
+          {
+            attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 20,
+          }
+        ).addTo(newMap);
+        
+        return newMap;
+      } catch (error) {
+        console.error("Error initializing map:", error);
+        return null;
+      }
+    };
     
     // Ensure container is ready
     if (!mapContainer.offsetWidth || !mapContainer.offsetHeight) {
       const timer = setTimeout(() => {
-        if (mapRef.current && !map) {
-          const newMap = L.map(mapRef.current).setView([0, 0], 2);
-          L.tileLayer(
-            `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_API_KEY}`,
-            {
-              attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-              maxZoom: 20,
-            }
-          ).addTo(newMap);
-          setMap(newMap);
-        }
-      }, 100);
+        const newMap = initMap();
+        if (newMap) setMap(newMap);
+      }, 150);
       return () => clearTimeout(timer);
     }
 
-    const newMap = L.map(mapContainer).setView([0, 0], 2);
-
-    L.tileLayer(
-      `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_API_KEY}`,
-      {
-        attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 20,
-      }
-    ).addTo(newMap);
-
-    setMap(newMap);
+    const newMap = initMap();
+    if (newMap) setMap(newMap);
 
     return () => {
-      newMap.remove();
-      setMap(null);
+      if (newMap) {
+        try {
+          newMap.remove();
+        } catch (e) {
+          // Map may already be removed
+        }
+      }
     };
-  }, [map]);
+  }, []);
 
   useEffect(() => {
     if (!map || !mapRef.current) return;
