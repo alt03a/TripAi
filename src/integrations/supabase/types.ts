@@ -78,42 +78,72 @@ export type Database = {
       }
       destinations: {
         Row: {
+          activities: Json | null
+          attractions: Json | null
           avg_cost: number | null
           best_time: string | null
+          climate: string | null
           country: string
           created_at: string
+          currency: string | null
+          gallery: string[] | null
+          highlights: string[] | null
           id: string
           images: string[] | null
+          language: string | null
+          local_tips: string[] | null
           name: string
           rating: number | null
           summary: string | null
           tags: string[] | null
+          timezone: string | null
+          travel_guide: Json | null
           updated_at: string
         }
         Insert: {
+          activities?: Json | null
+          attractions?: Json | null
           avg_cost?: number | null
           best_time?: string | null
+          climate?: string | null
           country: string
           created_at?: string
+          currency?: string | null
+          gallery?: string[] | null
+          highlights?: string[] | null
           id?: string
           images?: string[] | null
+          language?: string | null
+          local_tips?: string[] | null
           name: string
           rating?: number | null
           summary?: string | null
           tags?: string[] | null
+          timezone?: string | null
+          travel_guide?: Json | null
           updated_at?: string
         }
         Update: {
+          activities?: Json | null
+          attractions?: Json | null
           avg_cost?: number | null
           best_time?: string | null
+          climate?: string | null
           country?: string
           created_at?: string
+          currency?: string | null
+          gallery?: string[] | null
+          highlights?: string[] | null
           id?: string
           images?: string[] | null
+          language?: string | null
+          local_tips?: string[] | null
           name?: string
           rating?: number | null
           summary?: string | null
           tags?: string[] | null
+          timezone?: string | null
+          travel_guide?: Json | null
           updated_at?: string
         }
         Relationships: []
