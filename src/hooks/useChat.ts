@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatMessage {
   id: string;
@@ -27,12 +28,51 @@ export const useChat = () => {
     setIsLoading(true);
 
     try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "Please log in to use the chat feature. Your conversations will be saved to your account.",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Use supabase.functions.invoke for proper authentication
+      const { data: response, error } = await supabase.functions.invoke("chat", {
+        body: {
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          mode,
+        },
+      });
+
+      // Handle non-streaming response (error cases)
+      if (error) {
+        throw new Error(error.message || "Failed to connect to chat service");
+      }
+
+      // If response is not a stream (error response), handle it
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+
+      // For streaming, we need to handle differently
+      // The supabase.functions.invoke doesn't natively support streaming
+      // So we'll fall back to direct fetch with auth header for streaming
       const CHAT_URL = `https://ypjmqcuxruwpoidmjkiw.supabase.co/functions/v1/chat`;
       
-      const response = await fetch(CHAT_URL, {
+      const streamResponse = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           messages: [...messages, userMessage].map(m => ({
@@ -43,11 +83,16 @@ export const useChat = () => {
         }),
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error(`Failed to start stream: ${response.status}`);
+      if (!streamResponse.ok) {
+        const errorData = await streamResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to start stream: ${streamResponse.status}`);
       }
 
-      const reader = response.body.getReader();
+      if (!streamResponse.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = streamResponse.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = "";
       let streamDone = false;
@@ -119,7 +164,9 @@ export const useChat = () => {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+        content: error instanceof Error && error.message.includes("log in") 
+          ? error.message 
+          : "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
         timestamp: new Date(),
       };
       
