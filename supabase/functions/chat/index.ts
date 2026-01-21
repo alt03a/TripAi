@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,32 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.log("[Chat] No authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Please log in to use the chat feature" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.log("[Chat] Invalid user:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Invalid user - Please log in again" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { messages, mode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -27,7 +54,7 @@ serve(async (req) => {
 
     const systemPrompt = systemPrompts[mode as keyof typeof systemPrompts] || systemPrompts.planning;
 
-    console.log(`[Chat] Processing ${mode} mode request with ${messages.length} messages`);
+    console.log(`[Chat] User ${user.id} - Processing ${mode} mode request with ${messages.length} messages`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -47,7 +74,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       if (response.status === 429) {
-        console.error("[Chat] Rate limit exceeded");
+        console.error("[Chat] Rate limit exceeded for user:", user.id);
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), 
           {
@@ -79,7 +106,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("[Chat] Successfully initiated stream");
+    console.log(`[Chat] User ${user.id} - Successfully initiated stream`);
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });

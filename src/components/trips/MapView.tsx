@@ -3,6 +3,7 @@ import { MapPin, Navigation, Locate, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -16,19 +17,51 @@ interface MapViewProps {
   locations: Location[];
 }
 
-const GEOAPIFY_API_KEY = "9820c4ade98c4ac992b68e390c427c30";
-
 export const MapView = ({ locations }: MapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<L.Map | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [tileUrl, setTileUrl] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const routeLayerRef = useRef<L.GeoJSON | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const userAccuracyCircleRef = useRef<L.Circle | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const { toast } = useToast();
+
+  // Fetch tile URL from edge function on mount
+  useEffect(() => {
+    const fetchTileUrl = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setMapError("Please log in to view the map");
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke("map-proxy", {
+          body: { action: "tile-url" },
+        });
+
+        if (error) {
+          console.error("[MapView] Error fetching tile URL:", error);
+          setMapError("Failed to load map configuration");
+          return;
+        }
+
+        if (data?.tileUrl) {
+          setTileUrl(data.tileUrl);
+        }
+      } catch (error) {
+        console.error("[MapView] Error:", error);
+        setMapError("Failed to load map");
+      }
+    };
+
+    fetchTileUrl();
+  }, []);
 
   // Create user location marker icon
   const createUserIcon = () => {
@@ -162,9 +195,9 @@ export const MapView = ({ locations }: MapViewProps) => {
     };
   }, []);
 
-  // Initialize map only once
+  // Initialize map only once when tileUrl is available
   useEffect(() => {
-    if (!mapRef.current || map) return;
+    if (!mapRef.current || map || !tileUrl) return;
 
     const mapContainer = mapRef.current;
     
@@ -178,13 +211,10 @@ export const MapView = ({ locations }: MapViewProps) => {
           scrollWheelZoom: true,
         }).setView([-8.5, 115.2], 10); // Default to Bali area
         
-        L.tileLayer(
-          `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_API_KEY}`,
-          {
-            attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            maxZoom: 20,
-          }
-        ).addTo(newMap);
+        L.tileLayer(tileUrl, {
+          attribution: '© <a href="https://www.geoapify.com/">Geoapify</a> | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 20,
+        }).addTo(newMap);
         
         return newMap;
       } catch (error) {
@@ -214,7 +244,7 @@ export const MapView = ({ locations }: MapViewProps) => {
         }
       }
     };
-  }, []);
+  }, [tileUrl]);
 
   useEffect(() => {
     if (!map || !mapRef.current) return;
@@ -250,7 +280,7 @@ export const MapView = ({ locations }: MapViewProps) => {
     };
 
     // Add markers and routes with a small delay to ensure map is fully ready
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       // Add markers
       locations.forEach((location, index) => {
         try {
@@ -265,31 +295,30 @@ export const MapView = ({ locations }: MapViewProps) => {
         }
       });
 
-      // Fetch and display route
+      // Fetch and display route via edge function
       if (locations.length > 1) {
         const waypoints = locations
           .map((loc) => `${loc.lat},${loc.lng}`)
           .join("|");
 
-        fetch(
-          `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=drive&apiKey=${GEOAPIFY_API_KEY}`
-        )
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.features && data.features.length > 0) {
-              const routeLayer = L.geoJSON(data, {
-                style: {
-                  color: "hsl(var(--secondary))",
-                  weight: 4,
-                  opacity: 0.8,
-                },
-              }).addTo(map);
-              routeLayerRef.current = routeLayer;
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching route:", error);
+        try {
+          const { data, error } = await supabase.functions.invoke("map-proxy", {
+            body: { action: "route", waypoints },
           });
+
+          if (!error && data?.features && data.features.length > 0) {
+            const routeLayer = L.geoJSON(data, {
+              style: {
+                color: "hsl(var(--secondary))",
+                weight: 4,
+                opacity: 0.8,
+              },
+            }).addTo(map);
+            routeLayerRef.current = routeLayer;
+          }
+        } catch (error) {
+          console.error("Error fetching route:", error);
+        }
       }
 
       // Fit bounds
@@ -302,19 +331,27 @@ export const MapView = ({ locations }: MapViewProps) => {
     return () => clearTimeout(timer);
   }, [map, locations]);
 
-  if (!GEOAPIFY_API_KEY) {
+  if (mapError) {
     return (
       <Card className="p-6 bg-muted/30">
         <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-lg gap-4">
           <MapPin className="h-12 w-12 text-muted-foreground" />
           <div className="text-center space-y-2">
             <p className="text-muted-foreground font-medium">
-              Map configuration error
-            </p>
-            <p className="text-sm text-muted-foreground max-w-md">
-              The map API key is not configured. Please contact the administrator.
+              {mapError}
             </p>
           </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!tileUrl) {
+    return (
+      <Card className="p-6 bg-muted/30">
+        <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-lg gap-4">
+          <LoaderCircle className="h-12 w-12 text-muted-foreground animate-spin" />
+          <p className="text-muted-foreground font-medium">Loading map...</p>
         </div>
       </Card>
     );
