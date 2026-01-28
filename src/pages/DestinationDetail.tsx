@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useDestination } from "@/hooks/useDestinations";
+import { useWishlist } from "@/hooks/useWishlist";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -27,6 +28,7 @@ import {
   Shield,
   Navigation,
   Bookmark,
+  ExternalLink,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -35,8 +37,10 @@ export default function DestinationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: destination, isLoading } = useDestination(id || "");
-  const [isSaved, setIsSaved] = useState(false);
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [selectedImage, setSelectedImage] = useState(0);
+  
+  const isSaved = id ? isInWishlist(id) : false;
 
   if (isLoading) {
     return (
@@ -120,7 +124,7 @@ export default function DestinationDetail() {
           
           {/* Save Button */}
           <button
-            onClick={() => setIsSaved(!isSaved)}
+            onClick={() => id && toggleWishlist(id)}
             className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors"
           >
             <Heart
@@ -340,6 +344,36 @@ export default function DestinationDetail() {
                     Plan a Trip
                   </Button>
                 </Card>
+
+                {/* Map Location */}
+                {destination.latitude && destination.longitude && (
+                  <Card className="p-6">
+                    <h2 className="text-lg font-heading font-semibold mb-4 flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      Location
+                    </h2>
+                    <div className="aspect-video rounded-lg overflow-hidden bg-muted relative">
+                      <iframe
+                        title={`Map of ${destination.name}`}
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        style={{ border: 0 }}
+                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${destination.longitude - 0.1}%2C${destination.latitude - 0.1}%2C${destination.longitude + 0.1}%2C${destination.latitude + 0.1}&layer=mapnik&marker=${destination.latitude}%2C${destination.longitude}`}
+                        allowFullScreen
+                      />
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${destination.latitude},${destination.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 flex items-center gap-2 text-sm text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open in Google Maps
+                    </a>
+                  </Card>
+                )}
               </div>
             </div>
           </TabsContent>

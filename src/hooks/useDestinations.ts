@@ -49,6 +49,8 @@ export interface Destination {
   activities?: Activity[];
   localTips?: string[];
   travelGuide?: TravelGuide;
+  latitude?: number;
+  longitude?: number;
 }
 
 // Transform database row to Destination interface
@@ -72,6 +74,8 @@ const transformDestination = (row: any): Destination => ({
   activities: row.activities || [],
   localTips: row.local_tips || [],
   travelGuide: row.travel_guide || {},
+  latitude: row.latitude ? parseFloat(row.latitude) : undefined,
+  longitude: row.longitude ? parseFloat(row.longitude) : undefined,
 });
 
 export const useDestinations = (query?: string) => {

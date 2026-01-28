@@ -91,7 +91,9 @@ export type Database = {
           id: string
           images: string[] | null
           language: string | null
+          latitude: number | null
           local_tips: string[] | null
+          longitude: number | null
           name: string
           rating: number | null
           summary: string | null
@@ -114,7 +116,9 @@ export type Database = {
           id?: string
           images?: string[] | null
           language?: string | null
+          latitude?: number | null
           local_tips?: string[] | null
+          longitude?: number | null
           name: string
           rating?: number | null
           summary?: string | null
@@ -137,7 +141,9 @@ export type Database = {
           id?: string
           images?: string[] | null
           language?: string | null
+          latitude?: number | null
           local_tips?: string[] | null
+          longitude?: number | null
           name?: string
           rating?: number | null
           summary?: string | null
@@ -351,6 +357,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      wishlists: {
+        Row: {
+          created_at: string
+          destination_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          destination_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          destination_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlists_destination_id_fkey"
+            columns: ["destination_id"]
+            isOneToOne: false
+            referencedRelation: "destinations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

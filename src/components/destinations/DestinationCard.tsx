@@ -1,8 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, MapPin, Star } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useWishlist } from "@/hooks/useWishlist";
 
 interface DestinationCardProps {
   id: string;
@@ -25,11 +25,12 @@ export const DestinationCard = ({
   tags,
   onClick,
 }: DestinationCardProps) => {
-  const [isSaved, setIsSaved] = useState(false);
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const isSaved = isInWishlist(id);
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsSaved(!isSaved);
+    toggleWishlist(id);
   };
 
   return (
